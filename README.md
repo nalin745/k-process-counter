@@ -34,14 +34,14 @@ Navigate to CPCExporter directory
 
 03. Go to the Helm
     Install prometheus 
-	-- helm install prometheus prometheus -n <<namespace>>
+	-- helm install prometheus prometheus
     
     Install grafana 
-	-- helm install grafana grafana -n <<namespace>>
+	-- helm install grafana grafana 
     
     Install alertmanager 
-	-- helm install alertmanager alertmanager -n <<namespace>>
+	-- helm install alertmanager alertmanager
     
     Install process-counter-exporter 
-	-- helm install process-counter-exporter process-counter-exporter -n <namespace>
+	-- helm install process-counter-exporter process-counter-exporter 
 
