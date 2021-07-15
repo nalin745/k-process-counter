@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+{{- with .Values.templates.config }}
+data:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules-config
+{{- with .Values.templates.alert }}
+data:
+  {{- toYaml . | nindent 2 }}
+{{- end }}

@@ -1,0 +1,271 @@
+
+replicaCount: 1
+
+labels:
+  k8s-app: prometheus
+  app.kubernetes.io/name: prometheus
+  app.kubernetes.io/component: prometheus
+
+commonAnnotations:
+  annotations:
+    prometheus.io/scrape: 'true'
+
+image:
+  repository: quay.io/prometheus/prometheus
+  pullPolicy: IfNotPresent
+  tag: v2.25.0
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+args:
+  - --config.file=/etc/prometheus/prometheus.yaml
+  - --web.console.libraries=/etc/prometheus/console_libraries
+  - --web.console.templates=/etc/prometheus/consoles
+  - --web.enable-lifecycle
+
+probs:
+  readinessProbe:
+    enabled: true
+    readinessProbe:
+      httpGet:
+        path: /-/ready
+        port: 9090
+      initialDelaySeconds: 30
+      timeoutSeconds: 30
+  livenessProbe:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /-/healthy
+        port: 9090
+      initialDelaySeconds: 30
+      timeoutSeconds: 30
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 9090
+
+
+resources:
+
+  requests:
+    cpu: 200m
+    memory: 1000Mi
+
+volumeMounts:
+  - name: config-file
+    mountPath: /etc/prometheus/prometheus.yaml
+    subPath: prometheus.yaml
+  - name: rules-file
+    mountPath: /etc/prometheus/rules.yaml
+    subPath: rules.yaml
+
+storageClassName: gfs-sc
+
+requestsStorage: "1Gi"
+
+
+volumes:
+  - name: config-file
+    configMap:
+      name: prometheus-config
+  - name: rules-file
+    configMap:
+      name: prometheus-rules-config
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+templates:
+  config:
+    prometheus.yaml: |-
+      global:
+        scrape_interval: 10s
+
+      # Alertmanager configuration
+      alerting:
+        alertmanagers:
+        - static_configs:
+          - targets:
+            - alertmanager:9093
+
+      rule_files:
+      - "rules.yaml"
+
+      scrape_configs:
+      - job_name: prometheus
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        metrics_path: /metrics
+        scheme: http
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - separator: ;
+          regex: __meta_kubernetes_pod_label_(.+)
+          replacement: $1
+          action: labelmap
+        - source_labels: [__address__]
+          separator: ;
+          regex: ([^:]+)(?::\d+)?
+          target_label: __address__
+          replacement: $1:9090
+          action: replace
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_k8s_app]
+          separator: ;
+          regex: monitoring;prometheus
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_namespace]
+          separator: ;
+          regex: (.*)
+          target_label: namespace
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          regex: (.*)
+          target_label: pod
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          regex: (.*)
+          target_label: instance
+          replacement: $1
+          action: replace
+      - job_name: node-exporter
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        metrics_path: /metrics
+        scheme: http
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - separator: ;
+          regex: __meta_kubernetes_pod_label_(.+)
+          replacement: $1
+          action: labelmap
+        - source_labels: [__address__]
+          separator: ;
+          regex: ([^:]+)(?::\d+)?
+          target_label: __address__
+          replacement: $1:9100
+          action: replace
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_k8s_app]
+          separator: ;
+          regex: monitoring;node-exporter
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_namespace]
+          separator: ;
+          regex: (.*)
+          target_label: namespace
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          regex: (.*)
+          target_label: pod
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          separator: ;
+          regex: (.*)
+          target_label: instance
+          replacement: $1
+          action: replace
+      - job_name: kubernetes-service-endpoints
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        metrics_path: /metrics
+        scheme: http
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - separator: ;
+          regex: __meta_kubernetes_service_label_(.+)
+          replacement: $1
+          action: labelmap
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          separator: ;
+          regex: "true"
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+          separator: ;
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+          separator: ;
+          regex: (https?)
+          target_label: __scheme__
+          replacement: $1
+          action: replace
+        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+          separator: ;
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          target_label: __address__
+          replacement: $1:$2
+          action: replace
+        - source_labels: [__meta_kubernetes_namespace]
+          separator: ;
+          regex: (.*)
+          target_label: namespace
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          regex: (.*)
+          target_label: pod
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          regex: (.*)
+          target_label: instance
+          replacement: $1
+          action: replace
+  alert:
+    rules.yaml: |-
+        groups:
+        - name: demo-alerts
+          rules:
+          - alert: process-counter-cretical
+            expr: system_process_count > 1000
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Total Process Count is Critical
+          - alert: process-counter-medium
+            expr: system_process_count > 800
+            for: 1m
+            labels:
+              severity: medium
+            annotations:
+              summary: Total Process Count is Medium

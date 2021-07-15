@@ -1,0 +1,122 @@
+
+replicaCount: 1
+
+labels:
+  k8s-app: alertmanager
+  app.kubernetes.io/name: alertmanager
+  app.kubernetes.io/component: alertmanager
+
+commonAnnotations:
+  annotations:
+    prometheus.io/scrape: 'true'
+
+
+image:
+  repository: quay.io/prometheus/alertmanager
+  pullPolicy: IfNotPresent
+  tag: v0.22.2
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 9093
+
+volumeMounts:
+  - name: alertmanager-config
+    mountPath: /etc/config/alertmanager.yaml
+    subPath: alertmanager.yaml
+
+
+args:
+  - "--config.file=/etc/config/alertmanager.yaml"
+  - "--web.listen-address=:9093"
+
+
+volumes:
+  - name: alertmanager-config
+    configMap:
+      defaultMode: 0666
+      name: alertmanager-config
+
+ingress:
+  enabled: false
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths: []
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+templates:
+  alertmanager.yaml: |-
+    route:
+      group_by: ['...']
+      receiver: email
+      routes:
+      - matchers:
+        - severity= "critical"
+        continue: true
+        receiver: l1slack
+      - matchers:
+        - severity= "medium"
+        continue: true
+        receiver: devslack
+      - matchers:
+        - severity= "critical"
+        receiver: email
+    receivers:
+    - name: l1slack
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/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'
+        channel: '#l1-aleters'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }} ] - {{ .CommonLabels.HostIP }}'
+        text:  '{{ range $val := .Alerts }}
+                 Alert: <http://kupm1:32623/d/opdVOOR7z/dashboard-techassignment|{{ index $val.Annotations "summary" }}>
+                 {{ end}}'
+    - name: devslack
+      slack_configs:
+      - api_url: 'https://hooks.slack.com/services/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'
+        channel: '#dev-alerts'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }} ] - {{ .CommonLabels.HostIP }}'
+        text:  '{{ range $val := .Alerts }}
+                 Alert: <http://kupm1:32623/d/opdVOOR7z/dashboard-techassignment|{{ index $val.Annotations "summary" }}>
+                 {{ end}}'
+    - name: email
+      email_configs:
+      - to: nalinbr745@gmail.com,thataucsc@gmail.com
+        from: nalinbr745@gmail.com
+        smarthost: smtp.gmail.com:587
+        auth_username: nalinbr745@gmail.com
+        auth_identity: nalinbr745@gmail.com
+        auth_password: 
+        send_resolved: true
