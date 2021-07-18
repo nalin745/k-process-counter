@@ -33,6 +33,7 @@ Navigate to CPCExporter directory
 
 
 03. Go to the Helm
+
    03.1 Install prometheus. 
    
 	 helm install prometheus prometheus
