@@ -32,13 +32,21 @@ Navigate to CPCExporter directory
        $ vi /HelmCharts/alertmanager/values.yaml
 
 
-  --Go to the Helm ,
-    Install prometheus 
-	-- helm install prometheus prometheus -n <namespace>
-    Install grafana 
-	-- helm install grafana grafana -n <namespace>
-    Install alertmanager 
-	-- helm install alertmanager alertmanager -n <namespace>
-    Install process-counter-exporter 
-	-- helm install process-counter-exporter process-counter-exporter -n <namespace>
+03. Go to the Helm
+
+   03.1 Install prometheus. 
+   
+	 helm install prometheus prometheus
+    
+   03.2 Install grafana.
+   
+	 helm install grafana grafana 
+    
+   03.3 Install alertmanager 
+   
+	 helm install alertmanager alertmanager
+    
+   03.4 Install process-counter-exporter 
+   
+	 helm install process-counter-exporter process-counter-exporter 
 
